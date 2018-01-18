@@ -1,6 +1,6 @@
 package search.server
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.{ActorRef, ActorSelection, ActorSystem}
 import akka.dispatch.MessageDispatcher
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
@@ -8,9 +8,8 @@ import akka.http.scaladsl.server.RouteResult.route2HandlerFlow
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.typesafe.config.Config
-import search.server.storage.{FileService, FileStorage, IndexService}
+import search.server.storage.{FileService, FileStorage, IndexNodeFactory, IndexService}
 
-import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
@@ -26,12 +25,11 @@ object Server {
 
   def main(args: Array[String]): Unit = {
 
-    val nodesConfig: Seq[Config] = system.settings.config
-      .getConfigList("index.nodes")
-      .asScala
+    val nodesConfig: Config = system.settings.config
+    val indexNodes: Seq[ActorSelection] = IndexNodeFactory.indexNodes(system)
 
     val fileService: ActorRef = system.actorOf(FileService.props(FileStorage()), "fileStorage")
-    val indexService: ActorRef = system.actorOf(IndexService.props(nodesConfig), "indexService")
+    val indexService: ActorRef = system.actorOf(IndexService.props(indexNodes), "indexService")
 
     val searchService = new SearchService(fileService, indexService)
 
