@@ -15,11 +15,6 @@ import scala.concurrent.duration._
   **/
 class IndexService(nodes: Seq[ActorSelection]) extends Actor with ActorLogging {
 
-  private def selectForWord: String => ActorSelection = IndexService.selectShard(nodes)
-
-  private implicit val timeout: Timeout = Timeout(5.seconds)
-  private implicit val blockingExecutor: MessageDispatcher = context.system.dispatchers.lookup("blocking-dispatcher")
-
   override def receive: Receive = {
 
     case Search(allContains) =>
@@ -36,6 +31,9 @@ class IndexService(nodes: Seq[ActorSelection]) extends Actor with ActorLogging {
 
   }
 
+  private implicit val timeout: Timeout = Timeout(5.seconds)
+  private implicit val blockingExecutor: MessageDispatcher = context.system.dispatchers.lookup("blocking-dispatcher")
+
   private def computeDocIdsIntersection(indexNodesResult: Set[Future[WordResult]]): Future[Set[String]] = {
     Future.sequence(indexNodesResult
       .map(_.map(_.ids)))
@@ -51,6 +49,8 @@ class IndexService(nodes: Seq[ActorSelection]) extends Actor with ActorLogging {
     indexNodesResult
   }
 
+  private def selectForWord: String => ActorSelection = IndexService.selectShard(nodes)
+
   private def sendIndexUpdate(words: Set[String], id: String): Unit = {
     words.map(IndexItem(_, id)).foreach(
       item => {
@@ -64,6 +64,13 @@ class IndexService(nodes: Seq[ActorSelection]) extends Actor with ActorLogging {
 
 object IndexService {
 
+  private val TURN_OFF_SIGN_BIT_MASK = 0x7FFFFFFF
+
+  def props(nodes: Seq[ActorSelection]): Props = Props(classOf[IndexService], nodes)
+
+  private def selectShard(nodes: Seq[ActorSelection])
+                         (word: String): ActorSelection = nodes((TURN_OFF_SIGN_BIT_MASK & word.hashCode) % nodes.size)
+
   case class Search(allContains: Set[String])
 
   case class Indexing(words: Set[String], id: String)
@@ -71,12 +78,5 @@ object IndexService {
   case class IndexSearchResponse(ids: Set[String])
 
   case class IndexUpdateResponse(wordsIndexed: Int)
-
-  def props(nodes: Seq[ActorSelection]): Props = Props(classOf[IndexService], nodes)
-
-  private val TURN_OFF_SIGN_BIT_MASK = 0x7FFFFFFF
-
-  private def selectShard(nodes: Seq[ActorSelection])
-                         (word: String): ActorSelection = nodes((TURN_OFF_SIGN_BIT_MASK & word.hashCode) % nodes.size)
 
 }

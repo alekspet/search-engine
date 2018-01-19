@@ -30,6 +30,8 @@ class FileService(fileStorage: FileStorage) extends Actor with ActorLogging {
 
 object FileService {
 
+  def props(fileStorage: FileStorage): Props = Props(classOf[FileService], fileStorage)
+
   case class Put(key: String, doc: String)
 
   case class Get(key: String)
@@ -39,6 +41,4 @@ object FileService {
   case class DocumentResult(id: String, doc: String)
 
   case class EmptyDocument()
-
-  def props(fileStorage: FileStorage): Props = Props(classOf[FileService], fileStorage)
 }

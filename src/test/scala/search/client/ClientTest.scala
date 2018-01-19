@@ -3,18 +3,14 @@ package search.client
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives
-import akka.http.scaladsl.server.Directives.{complete, get, parameters, path}
 import akka.http.scaladsl.settings.{ClientConnectionSettings, ConnectionPoolSettings, ParserSettings, ServerSettings}
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Flow
 import akka.testkit.{SocketUtil, TestKit}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import search.server.storage.FileService.{DocumentResult, EmptyDocument}
-import search.server.storage.IndexService.{IndexSearchResponse, IndexUpdateResponse, Search}
+import search.server.storage.IndexService.{IndexSearchResponse, IndexUpdateResponse}
 import search.server.support.JsonSupport._
-import search.server.support.TextTokenizer.textToWords
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -34,7 +30,9 @@ class ClientTest() extends TestKit(ActorSystem("ClientTest"))
   private val serverSettings = ServerSettings(system).withParserSettings(parserSettings)
   private val clientConSettings = ClientConnectionSettings(system).withParserSettings(parserSettings)
   private val clientSettings = ConnectionPoolSettings(system).withConnectionSettings(clientConSettings)
-
+  private val binding: Future[Http.ServerBinding] = Http()
+    .bindAndHandle(routes, host, port, settings = serverSettings)
+  private val client = Client(host, port)
 
   def routes =
     path("put" / Segment) {
@@ -63,12 +61,6 @@ class ClientTest() extends TestKit(ActorSystem("ClientTest"))
             }
         }
       }
-
-  private val binding: Future[Http.ServerBinding] = Http()
-    .bindAndHandle(routes, host, port, settings = serverSettings)
-
-
-  private val client = Client(host, port)
 
   override def afterAll {
     TestKit.shutdownActorSystem(system)

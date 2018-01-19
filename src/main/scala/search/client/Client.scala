@@ -52,6 +52,13 @@ object Client {
       })
     }
 
+    private def dispatchRequest(request: HttpRequest): Future[HttpEntity] = Source
+      .single(request)
+      .via(clientFlow)
+      .runWith(Sink.head)
+      .map(_.entity())
+      .mapTo[HttpEntity]
+
     override def put(key: String, document: String): Future[IndexUpdateResponse] = {
       val request = HttpRequest(method = HttpMethods.PUT, uri = s"/put/$key", entity = document)
       dispatchRequest(request).flatMap({ response =>
@@ -71,13 +78,6 @@ object Client {
       system.terminate()
       Await.result(system.whenTerminated, 1.minute)
     }
-
-    private def dispatchRequest(request: HttpRequest): Future[HttpEntity] = Source
-      .single(request)
-      .via(clientFlow)
-      .runWith(Sink.head)
-      .map(_.entity())
-      .mapTo[HttpEntity]
   }
 
 }
