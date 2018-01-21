@@ -9,7 +9,7 @@ sealed trait TextTokenizer {
     .map(normalize)
     .toSet
 
-  def normalize(word: String): String = word.toLowerCase
+  private def normalize(word: String): String = word.toLowerCase
 }
 
 

@@ -1,11 +1,11 @@
-package search.index
+package search.shard
 
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-import search.protocol.{IdsForWord, IndexItem, WordResult}
+import search.shard.IndexNode.{IdsForWords, IndexItem, WordResult}
 
-class IndexNodeTest() extends TestKit(ActorSystem("IndexNodeTest")) with ImplicitSender
+class IndexShardTest() extends TestKit(ActorSystem("IndexNodeTest")) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll {
 
   override def afterAll {
@@ -16,11 +16,11 @@ class IndexNodeTest() extends TestKit(ActorSystem("IndexNodeTest")) with Implici
 
     "search found when document in index" in {
       val indexNode = system.actorOf(IndexNode.props())
-      indexNode ! IndexItem("hi", "1")
-      indexNode ! IndexItem("there", "2")
+      indexNode ! IndexItem("1", Set("hi"))
+      indexNode ! IndexItem("2", Set("there"))
 
-      indexNode ! IdsForWord("hi")
-      expectMsg(WordResult("hi", Set("1")))
+      indexNode ! IdsForWords(Set("hi"))
+      expectMsg(WordResult(Set("1")))
     }
   }
 }

@@ -8,8 +8,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.http.scaladsl.unmarshalling.Unmarshaller._
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
-import search.server.storage.FileService.{DocumentResult, EmptyDocument}
-import search.server.storage.IndexService.{IndexSearchResponse, IndexUpdateResponse}
+import search.protocol._
 import search.server.support.JsonSupport._
 
 import scala.concurrent.duration._
@@ -22,9 +21,9 @@ trait Client {
 
   def get(key: String): Future[Either[EmptyDocument, DocumentResult]]
 
-  def put(key: String, document: String): Future[IndexUpdateResponse]
+  def put(key: String, document: String): Future[SaveDone]
 
-  def search(words: String): Future[IndexSearchResponse]
+  def search(words: String): Future[SearchResponse]
 
   def shutdown(): Unit
 
@@ -59,17 +58,17 @@ object Client {
       .map(_.entity())
       .mapTo[HttpEntity]
 
-    override def put(key: String, document: String): Future[IndexUpdateResponse] = {
+    override def put(key: String, document: String): Future[SaveDone] = {
       val request = HttpRequest(method = HttpMethods.PUT, uri = s"/put/$key", entity = document)
       dispatchRequest(request).flatMap({ response =>
-        Unmarshal(response).to[IndexUpdateResponse]
+        Unmarshal(response).to[SaveDone]
       })
     }
 
-    override def search(words: String): Future[IndexSearchResponse] = {
+    override def search(words: String): Future[SearchResponse] = {
       val request = HttpRequest(method = HttpMethods.GET, uri = s"/search?searchQuery=$words")
       dispatchRequest(request).flatMap({ response =>
-        Unmarshal(response).to[IndexSearchResponse]
+        Unmarshal(response).to[SearchResponse]
       })
     }
 

@@ -3,17 +3,17 @@
 ### Components
 - Http Client
 - Http Server
-- Distributed search index
+- Distributed storage with search index
 
 To run and execute project you need to have 'sbt' installed. The project structure include 2 server side component and client from root folder.
 1. Start http server with config file 'src/main/resources/server.conf': 
 ```bash
 sbt -Dconfig.file=src/main/resources/server.conf "runMain search.server.Server"
 ```
-server has configured index nodes to works with:
+server has configured storage nodes to works with:
 
 ```js
-index {
+storage {
   nodes = [
     {
       host = "127.0.0.1"
@@ -26,15 +26,15 @@ index {
   ]
 }
 ```
-2. Default config has 2 index nodes above to start them on specified ports perform:
+2. Default config has 2 storage nodes above to start them on specified ports perform:
 
 ```bash
-sbt -Dconfig.file=src/main/resources/node.conf -Dakka.remote.netty.tcp.port=5150 "runMain search.index.Node"
+sbt -Dconfig.file=src/main/resources/shard.conf -Dakka.remote.netty.tcp.port=5150 "runMain search.shard.Shard"
 ```
 ```bash
-sbt -Dconfig.file=src/main/resources/node.conf -Dakka.remote.netty.tcp.port=5151 "runMain search.index.Node"
+sbt -Dconfig.file=src/main/resources/shard.conf -Dakka.remote.netty.tcp.port=5151 "runMain search.shard.Shard"
 ```
-as result you will have server with http endpoints and 2 index nodes.
+as result you will have server with http endpoints and 2 storage nodes.
 
 3. Server expose api for usage:
 
@@ -51,9 +51,9 @@ trait Client {
 
   def get(key: String): Future[Either[EmptyDocument, DocumentResult]]
 
-  def put(key: String, document: String): Future[IndexUpdateResponse]
+  def put(key: String, document: String): Future[SaveDone]
 
-  def search(words: String): Future[IndexSearchResponse]
+  def search(words: String): Future[SearchResponse]
 
   def shutdown(): Unit
 

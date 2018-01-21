@@ -8,8 +8,7 @@ import akka.http.scaladsl.settings.{ClientConnectionSettings, ConnectionPoolSett
 import akka.stream.ActorMaterializer
 import akka.testkit.{SocketUtil, TestKit}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-import search.server.storage.FileService.{DocumentResult, EmptyDocument}
-import search.server.storage.IndexService.{IndexSearchResponse, IndexUpdateResponse}
+import search.protocol.{DocumentResult, EmptyDocument, SearchResponse, SaveDone}
 import search.server.support.JsonSupport._
 
 import scala.concurrent.duration._
@@ -36,9 +35,9 @@ class ClientTest() extends TestKit(ActorSystem("ClientTest"))
 
   def routes =
     path("put" / Segment) {
-      _ =>
+      id =>
         put {
-          complete(IndexUpdateResponse(2))
+          complete(SaveDone(id))
         }
     } ~ path("get" / "1") {
       get {
@@ -56,7 +55,7 @@ class ClientTest() extends TestKit(ActorSystem("ClientTest"))
           searchQuery =>
             get {
               complete {
-                IndexSearchResponse(Set("1", "2"))
+                SearchResponse(Set("1", "2"))
               }
             }
         }
@@ -70,7 +69,7 @@ class ClientTest() extends TestKit(ActorSystem("ClientTest"))
   "Search client" must {
 
     "upload document correctly" in {
-      Await.result(client.put("1", "some document"), 10.seconds) shouldBe IndexUpdateResponse(2)
+      Await.result(client.put("1", "some document"), 10.seconds) shouldBe SaveDone("1")
     }
 
     "get empty document correctly" in {
@@ -82,7 +81,7 @@ class ClientTest() extends TestKit(ActorSystem("ClientTest"))
     }
 
     "search document call works" in {
-      Await.result(client.search("hii"), 10.seconds) shouldBe IndexSearchResponse(Set("1", "2"))
+      Await.result(client.search("hii"), 10.seconds) shouldBe SearchResponse(Set("1", "2"))
     }
   }
 }

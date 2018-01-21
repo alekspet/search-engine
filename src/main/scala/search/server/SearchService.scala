@@ -6,15 +6,14 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import akka.util.Timeout
-import search.server.storage.FileService.{DocumentResult, EmptyDocument, Get, Put}
-import search.server.storage.IndexService.{IndexSearchResponse, IndexUpdateResponse, Indexing, Search}
+import search.protocol._
 import search.server.support.JsonSupport._
 import search.server.support.TextTokenizer._
 
 /**
   * Rest service with endpoints to use search and text upload.
   **/
-class SearchService(fileService: ActorRef, indexService: ActorRef)
+class SearchService(storageService: ActorRef)
                    (implicit val timeout: Timeout, val blockingExecutor: MessageDispatcher) {
 
   val searchRoute: Route = getDocument ~ putDocument ~ searchForAllWords
@@ -24,7 +23,14 @@ class SearchService(fileService: ActorRef, indexService: ActorRef)
     id =>
       get {
         complete {
-          (fileService ? Get(id)).mapTo[Either[EmptyDocument, DocumentResult]]
+          (storageService ? Get(id))
+            .mapTo[Option[Text]]
+            .map({
+              result =>
+                Either.cond(result.isDefined,
+                  DocumentResult(result.get.id, result.get.text),
+                  EmptyDocument())
+            })
         }
       }
   }
@@ -35,11 +41,7 @@ class SearchService(fileService: ActorRef, indexService: ActorRef)
         entity(as[String]) {
           doc =>
             complete {
-              val words = textToWords(doc)
-              (fileService ? Put(id, doc))
-                .flatMap(res =>
-                  indexService ? Indexing(words, id))
-                .mapTo[IndexUpdateResponse]
+              (storageService ? Put(id, doc)).mapTo[SaveDone]
             }
         }
       }
@@ -51,7 +53,7 @@ class SearchService(fileService: ActorRef, indexService: ActorRef)
         get {
           complete {
             val wordSet = textToWords(searchQuery)
-            (indexService ? Search(wordSet)).mapTo[IndexSearchResponse]
+            (storageService ? Search(wordSet)).mapTo[SearchResponse]
           }
         }
     }

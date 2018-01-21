@@ -7,8 +7,7 @@ import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.server.RouteResult.route2HandlerFlow
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
-import com.typesafe.config.Config
-import search.server.storage.{FileService, FileStorage, IndexNodeFactory, IndexService}
+import search.server.storage.{ShardNodeFactory, TextStorageService}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -20,18 +19,14 @@ object Server {
 
   implicit val system: ActorSystem = ActorSystem("search-engine-server")
   implicit val executionContext: MessageDispatcher = system.dispatchers.lookup("blocking-dispatcher")
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
+  implicit val mat: ActorMaterializer = ActorMaterializer()
   implicit val timeout: Timeout = Duration.fromNanos(system.settings.config.getDuration("service.timeout").toNanos)
 
   def main(args: Array[String]): Unit = {
 
-    val nodesConfig: Config = system.settings.config
-    val indexNodes: Seq[ActorSelection] = IndexNodeFactory.indexNodes(system)
-
-    val fileService: ActorRef = system.actorOf(FileService.props(FileStorage()), "fileStorage")
-    val indexService: ActorRef = system.actorOf(IndexService.props(indexNodes), "indexService")
-
-    val searchService = new SearchService(fileService, indexService)
+    val shardNodes: Seq[ActorSelection] = ShardNodeFactory.shardNodes(system)
+    val textStorageService: ActorRef = system.actorOf(TextStorageService.props(shardNodes), "textStorageService")
+    val searchService = new SearchService(textStorageService)
 
     val searchEndpoint: Future[ServerBinding] = Http().bindAndHandle(
       route2HandlerFlow(searchService.searchRoute),

@@ -1,4 +1,4 @@
-package search.index
+package search.shard
 
 import akka.actor.ActorSystem
 import search.protocol._
@@ -6,12 +6,12 @@ import search.protocol._
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-object Node {
+object Shard {
 
   val system: ActorSystem = ActorSystem(systemName)
 
   def main(args: Array[String]): Unit = {
-    system.actorOf(IndexNode.props(), indexName)
+    system.actorOf(ShardNode.props(), shardName)
     scala.sys.addShutdownHook(
       shutdown()
     )
