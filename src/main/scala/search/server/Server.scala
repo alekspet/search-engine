@@ -5,6 +5,7 @@ import akka.dispatch.MessageDispatcher
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.server.RouteResult.route2HandlerFlow
+import akka.routing.RoundRobinPool
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import search.server.storage.{ShardNodeFactory, TextStorageService}
@@ -25,7 +26,8 @@ object Server {
   def main(args: Array[String]): Unit = {
 
     val shardNodes: Seq[ActorSelection] = ShardNodeFactory.shardNodes(system)
-    val textStorageService: ActorRef = system.actorOf(TextStorageService.props(shardNodes), "textStorageService")
+    val textStorageService: ActorRef = system.actorOf(TextStorageService.props(shardNodes)
+        .withRouter(RoundRobinPool(16)), "textStorageService")
     val searchService = new SearchService(textStorageService)
 
     val searchEndpoint: Future[ServerBinding] = Http().bindAndHandle(

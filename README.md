@@ -78,3 +78,14 @@ The ab search results on local pc 4 cores:
 |32        | 19 ms |
 |64        | 38 ms |
 
+With round robin pool on text storage
+|conc req   |avg time|
+|---------:|-----|
+|1         | 2 ms |
+|2         | 2 ms |
+|4         | 3 ms |
+|8         | 5 ms |
+|16        | 7 ms |
+|32        | 13 ms |
+|64        | 25 ms |
+
